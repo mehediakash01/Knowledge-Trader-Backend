@@ -12,22 +12,19 @@ const getRedisClient = async () => {
   }
 
   if (!redisClient) {
-    redisClient = createClient({ url: config.redis.url });
+    redisClient = createClient({ 
+      url: config.redis.url,
+      socket: {
+        reconnectStrategy: false
+      }
+    });
     
-    redisClient.on("error", (error) => {
-      // We don't set redisClient = null here so node-redis can auto-reconnect,
-      // and we avoid leaking multiple clients that loop connections in the background.
-      logger.error({ 
-        message: "Redis cache error", 
-        error: error instanceof Error ? error.message : String(error)
-      });
+    redisClient.on("error", () => {
+      // Intentionally ignoring so it doesn't spam logs. It will fall back to memory cache.
     });
 
-    connectPromise = redisClient.connect().catch((err) => {
-      logger.error({ 
-        message: "Redis initial connect error", 
-        error: err instanceof Error ? err.message : String(err) 
-      });
+    connectPromise = redisClient.connect().catch(() => {
+      // Intentionally ignoring initial connect error to prevent log spam
     });
   }
 
@@ -42,8 +39,12 @@ const get = async <T>(key: string): Promise<T | null> => {
   const client = await getRedisClient();
 
   if (client) {
-    const cached = await client.get(key);
-    return cached ? (JSON.parse(cached) as T) : null;
+    try {
+      const cached = await client.get(key);
+      return cached ? (JSON.parse(cached) as T) : null;
+    } catch (error) {
+      logger.error({ message: "Redis get failed, falling back to memory", error: error instanceof Error ? error.message : String(error) });
+    }
   }
 
   const cached = memoryCache.get(key);
@@ -61,8 +62,12 @@ const set = async (key: string, value: unknown, ttlSeconds: number) => {
   const client = await getRedisClient();
 
   if (client) {
-    await client.set(key, serialized, { EX: ttlSeconds });
-    return;
+    try {
+      await client.set(key, serialized, { EX: ttlSeconds });
+      return;
+    } catch (error) {
+      logger.error({ message: "Redis set failed, falling back to memory", error: error instanceof Error ? error.message : String(error) });
+    }
   }
 
   memoryCache.set(key, {
@@ -75,13 +80,16 @@ const delByPrefix = async (prefix: string) => {
   const client = await getRedisClient();
 
   if (client) {
-    const keys = await client.keys(`${prefix}*`);
+    try {
+      const keys = await client.keys(`${prefix}*`);
 
-    if (keys.length) {
-      await client.del(keys);
+      if (keys.length) {
+        await client.del(keys);
+      }
+      return;
+    } catch (error) {
+      logger.error({ message: "Redis delByPrefix failed, falling back to memory", error: error instanceof Error ? error.message : String(error) });
     }
-
-    return;
   }
 
   for (const key of memoryCache.keys()) {

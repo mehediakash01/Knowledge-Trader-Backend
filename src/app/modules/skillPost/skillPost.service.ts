@@ -67,11 +67,6 @@ const getAllSkillPosts = async (
             mode: "insensitive",
           },
         },
-        {
-          tags: {
-            has: searchTerm,
-          },
-        },
       ],
     });
   }
