@@ -35,6 +35,37 @@ const createUser = async (payload: TCreateUserPayload) => {
   return result;
 };
 
+const getUserProfile = async (id: string) => {
+  const result = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      reputationScore: true,
+      expertise: true,
+      interests: true,
+      posts: {
+        include: {
+          creator: {
+            select: { id: true, name: true, reputationScore: true },
+          },
+          _count: {
+            select: { reviews: true },
+          },
+        },
+      },
+    },
+  });
+
+  if (!result) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  return result;
+};
+
 export const UserServices = {
   createUser,
+  getUserProfile,
 };

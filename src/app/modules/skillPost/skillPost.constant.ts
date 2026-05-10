@@ -5,4 +5,5 @@ export const skillPostFilterableFields = [
   "category",
   "minPrice",
   "maxPrice",
+  "creatorId",
 ];

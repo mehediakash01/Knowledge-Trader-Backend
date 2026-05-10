@@ -28,7 +28,40 @@ const getMyTrades = catchAsync(async (req, res) => {
   });
 });
 
+const createBarterRequest = catchAsync(async (req, res) => {
+  const result = await TradeServices.createBarterRequest({
+    ...req.body,
+    senderId: req.user!.id,
+  });
+
+  sendResponse(res, {
+    statusCode: httpStatus.CREATED,
+    success: true,
+    message: "Barter request sent successfully",
+    data: result,
+  });
+});
+
+const updateBarterStatus = catchAsync(async (req, res) => {
+  const { barterId } = req.params;
+  const { status } = req.body;
+  const result = await TradeServices.updateBarterStatus(
+    barterId,
+    req.user!.id,
+    status,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: `Barter request ${status.toLowerCase()} successfully`,
+    data: result,
+  });
+});
+
 export const TradeControllers = {
   executeTokenTrade,
   getMyTrades,
+  createBarterRequest,
+  updateBarterStatus,
 };

@@ -16,4 +16,18 @@ router.post(
 
 router.get("/my-trades", auth(Role.USER), TradeControllers.getMyTrades);
 
+router.post(
+  "/barter-request",
+  auth(Role.USER),
+  validateRequest(TradeValidation.createBarterValidationSchema),
+  TradeControllers.createBarterRequest,
+);
+
+router.patch(
+  "/barter-request/:barterId",
+  auth(Role.USER),
+  validateRequest(TradeValidation.updateBarterStatusValidationSchema),
+  TradeControllers.updateBarterStatus,
+);
+
 export const TradeRoutes = router;

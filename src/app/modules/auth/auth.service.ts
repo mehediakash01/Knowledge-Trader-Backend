@@ -70,6 +70,23 @@ const loginUser = async (payload: TLoginPayload) => {
   };
 };
 
+const getMe = async (id: string) => {
+  const result = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      tokenBalance: true,
+      reputationScore: true,
+      image: true,
+    },
+  });
+  return result;
+};
+
 export const AuthServices = {
   loginUser,
+  getMe,
 };

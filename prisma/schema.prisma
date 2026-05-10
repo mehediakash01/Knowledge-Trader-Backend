@@ -25,8 +25,10 @@ model User {
   tradesAsLearner Trade[]     @relation("Learner")
   tradesAsTeacher Trade[]     @relation("Teacher")
   transactions    Transaction[]
-  notifications   Notification[]
-  reviews         Review[]
+  notifications       Notification[]
+  reviews             Review[]
+  bartersSent         BarterRequest[] @relation("BarterSender")
+  bartersReceived     BarterRequest[] @relation("BarterReceiver")
 }
 
 model SkillPost {
@@ -45,6 +47,8 @@ model SkillPost {
   creator          User     @relation(fields: [creatorId], references: [id])
   trades           Trade[]
   reviews          Review[]
+  bartersOffered   BarterRequest[] @relation("OfferedSkill")
+  bartersRequested BarterRequest[] @relation("RequestedSkill")
 
   @@index([category])
   @@index([tokenPrice])
@@ -96,3 +100,19 @@ model Review {
   comment   String    @db.Text
   createdAt DateTime  @default(now())
 }
+
+model BarterRequest {
+  id               String    @id @default(uuid())
+  senderId         String
+  sender           User      @relation("BarterSender", fields: [senderId], references: [id])
+  receiverId       String
+  receiver         User      @relation("BarterReceiver", fields: [receiverId], references: [id])
+  skillOfferedId   String
+  skillOffered     SkillPost @relation("OfferedSkill", fields: [skillOfferedId], references: [id])
+  skillRequestedId String
+  skillRequested   SkillPost @relation("RequestedSkill", fields: [skillRequestedId], references: [id])
+  status           String    @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+

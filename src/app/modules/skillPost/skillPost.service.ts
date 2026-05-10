@@ -49,7 +49,7 @@ const getAllSkillPosts = async (
 ) => {
   const { page, limit, skip, sortBy, sortOrder } =
     paginationHelper.calculatePagination(options);
-  const { searchTerm, category, minPrice, maxPrice } = filters;
+  const { searchTerm, category, minPrice, maxPrice, creatorId } = filters;
   const andConditions: Prisma.SkillPostWhereInput[] = [];
 
   if (searchTerm) {
@@ -102,6 +102,12 @@ const getAllSkillPosts = async (
         ...(minPrice ? { gte: Number(minPrice) } : {}),
         ...(maxPrice ? { lte: Number(maxPrice) } : {}),
       },
+    });
+  }
+
+  if (creatorId) {
+    andConditions.push({
+      creatorId,
     });
   }
 
@@ -188,16 +194,35 @@ const getSingleSkillPost = async (id: string, userId?: string) => {
       })
     : null;
 
+  const hasReviewed = userId
+    ? await prisma.review.findFirst({
+        where: {
+          postId: id,
+          userId,
+        },
+        select: {
+          id: true,
+        },
+      })
+    : null;
+
   const canAccessLockedContent =
     Boolean(userId) &&
     (result.creatorId === userId || Boolean(hasCompletedTrade));
 
+  const responseData = {
+    ...result,
+    isAccessible: canAccessLockedContent,
+    isOwned: result.creatorId === userId,
+    hasReviewed: Boolean(hasReviewed),
+  };
+
   if (!canAccessLockedContent) {
-    const { lockedContent: _lockedContent, ...publicResult } = result;
+    const { lockedContent: _lockedContent, ...publicResult } = responseData;
     return publicResult;
   }
 
-  return result;
+  return responseData;
 };
 
 const getCategories = async () => {

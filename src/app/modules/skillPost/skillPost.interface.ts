@@ -20,4 +20,5 @@ export type TSkillPostFilters = {
   category?: string;
   minPrice?: string | number;
   maxPrice?: string | number;
+  creatorId?: string;
 };
