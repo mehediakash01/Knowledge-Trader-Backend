@@ -1,5 +1,9 @@
+import { User } from "../../../../generated/prisma";
+import AppError from "../../../errors/AppError";
+import httpStatus from "http-status";
 import bcrypt from "bcrypt";
 import { prisma } from "../../../../lib/prisma";
+import pick from "../../../shared/pick";
 
 type TCreateUserPayload = {
   name: string;
@@ -18,7 +22,9 @@ const createUser = async (payload: TCreateUserPayload) => {
       tokenBalance: 10,
       reputationScore: 0.0,
       expertise: [],
-      interests: [],
+      learningPath: [],
+      socialLinks: [],
+      experience: [],
     },
     select: {
       id: true,
@@ -27,8 +33,14 @@ const createUser = async (payload: TCreateUserPayload) => {
       role: true,
       tokenBalance: true,
       reputationScore: true,
-      expertise: true,
       interests: true,
+      expertise: true,
+      image: true,
+      bio: true,
+      tagline: true,
+      socialLinks: true,
+      experience: true,
+      learningPath: true,
     },
   });
 
@@ -43,8 +55,14 @@ const getUserProfile = async (id: string) => {
       name: true,
       email: true,
       reputationScore: true,
-      expertise: true,
       interests: true,
+      expertise: true,
+      learningPath: true,
+      socialLinks: true,
+      experience: true,
+      image: true,
+      bio: true,
+      tagline: true,
       posts: {
         include: {
           creator: {
@@ -65,7 +83,43 @@ const getUserProfile = async (id: string) => {
   return result;
 };
 
+const updateProfile = async (id: string, payload: Partial<User>) => {
+  const allowedKeys = [
+    "name",
+    "bio",
+    "tagline",
+    "image",
+    "socialLinks",
+    "experience",
+    "expertise",
+    "learningPath",
+  ];
+
+  const data = pick(payload as Record<string, unknown>, allowedKeys);
+
+  const result = await prisma.user.update({
+    where: { id },
+    data: data as any,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      reputationScore: true,
+      interests: true,
+      expertise: true,
+      learningPath: true,
+      socialLinks: true,
+      experience: true,
+      image: true,
+      bio: true,
+      tagline: true,
+    },
+  });
+  return result;
+};
+
 export const UserServices = {
   createUser,
   getUserProfile,
+  updateProfile,
 };

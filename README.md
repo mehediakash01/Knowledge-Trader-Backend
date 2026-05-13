@@ -251,6 +251,10 @@ JWT_REFRESH_SECRET=change-me-refresh
 JWT_ACCESS_EXPIRES_IN=1d
 JWT_REFRESH_EXPIRES_IN=30d
 
+# Google OAuth
+GOOGLE_CLIENT_ID=your-google-oauth-client-id
+GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
+
 # Redis
 REDIS_URL=redis://localhost:6379
 

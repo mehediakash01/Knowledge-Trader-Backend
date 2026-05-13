@@ -7,6 +7,13 @@ const loginValidationSchema = z.object({
   }),
 });
 
+const googleLoginValidationSchema = z.object({
+  body: z.object({
+    token: z.string().min(1, "Google token is required"),
+  }),
+});
+
 export const AuthValidation = {
   loginValidationSchema,
+  googleLoginValidationSchema,
 };

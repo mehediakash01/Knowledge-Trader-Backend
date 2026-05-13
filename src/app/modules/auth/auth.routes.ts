@@ -7,6 +7,12 @@ import auth from "../../middlewares/auth";
 const router = Router();
 
 router.post(
+  "/google-login",
+  validateRequest(AuthValidation.googleLoginValidationSchema),
+  AuthControllers.googleLogin,
+);
+
+router.post(
   "/login",
   validateRequest(AuthValidation.loginValidationSchema),
   AuthControllers.loginUser,

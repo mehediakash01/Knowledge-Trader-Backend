@@ -2,53 +2,93 @@ generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
 }
+
 datasource db {
   provider = "postgresql"
 }
+
 enum Role {
   USER
   ADMIN
   MANAGER
 }
 
+enum RoadmapType {
+  DAILY
+  HOURLY
+  SEVEN_DAY
+  THIRTY_DAY
+}
+
 model User {
-  id              String    @id @default(uuid())
+  id              String          @id @default(uuid())
   name            String
-  email           String    @unique
+  email           String          @unique
   password        String
-  role            Role      @default(USER)
-  tokenBalance    Int       @default(10)
-  reputationScore Float     @default(0.0)
-  expertise       String[]
-  interests       String[]
+  role            Role            @default(USER)
+  tokenBalance    Int             @default(10)
+  reputationScore Float           @default(0.0)
+  image           String?
+  bio             String?         @db.Text
+  tagline         String?
+  interests       String[]        @default([])
+  socialLinks     Json?
+  experience      Json?
+  expertise       Json?
+  learningPath    Json?
   posts           SkillPost[]
-  tradesAsLearner Trade[]     @relation("Learner")
-  tradesAsTeacher Trade[]     @relation("Teacher")
+  tradesAsLearner Trade[]         @relation("Learner")
+  tradesAsTeacher Trade[]         @relation("Teacher")
   transactions    Transaction[]
-  notifications       Notification[]
-  reviews             Review[]
-  bartersSent         BarterRequest[] @relation("BarterSender")
-  bartersReceived     BarterRequest[] @relation("BarterReceiver")
+  notifications   Notification[]
+  reviews         Review[]
+  bartersSent     BarterRequest[] @relation("BarterSender")
+  bartersReceived BarterRequest[] @relation("BarterReceiver")
+  questionsAsked  Question[]      @relation("QuestionAsker")
+  answersGiven    Question[]      @relation("QuestionAnswerer")
 }
 
 model SkillPost {
-  id               String   @id @default(uuid())
-  title            String
-  slug             String   @unique
-  category         String   @default("General")
-  tags             String[] @default([])
+  id       String   @id @default(uuid())
+  title    String
+  slug     String   @unique
+  category String   @default("General")
+  tags     String[] @default([])
+
+  // Public / Marketing Fields
   shortDescription String
-  longDescription  String   @db.Text
-  previewContent   Json
-  lockedContent    Json
+  thumbnail        String?
+  teaserAsset      String?
+  roadmapType      RoadmapType @default(SEVEN_DAY)
+  outcomes         String[]    @default([])
+  targetAudience   String?
+  prerequisites    String?
+  valueProp        String?
+
+  // Strategy Vault (Private)
+  longDescription String?  @db.Text
+  syllabus        Json?
+  resourceLinks   String[] @default([])
+  lockedContent   Json?
+
+  aiReviewSentimentScore Int?
+  aiReviewPros           Json?
+  aiReviewCons           Json?
+  aiReviewSummary        String?   @db.Text
+  aiReviewGeneratedAt    DateTime?
+
   tokenPrice       Int
-  images           String[]
+  images           String[]        @default([])
   creatorId        String
-  creator          User     @relation(fields: [creatorId], references: [id])
+  creator          User            @relation(fields: [creatorId], references: [id])
   trades           Trade[]
   reviews          Review[]
+  questions        Question[]
   bartersOffered   BarterRequest[] @relation("OfferedSkill")
   bartersRequested BarterRequest[] @relation("RequestedSkill")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@index([category])
   @@index([tokenPrice])
@@ -57,16 +97,33 @@ model SkillPost {
   @@index([category, tokenPrice])
 }
 
+model Question {
+  id         String    @id @default(uuid())
+  postId     String
+  post       SkillPost @relation(fields: [postId], references: [id])
+  askerId    String
+  asker      User      @relation("QuestionAsker", fields: [askerId], references: [id])
+  answeredBy String?
+  answerer   User?     @relation("QuestionAnswerer", fields: [answeredBy], references: [id])
+  body       String    @db.Text
+  answer     String?   @db.Text
+  createdAt  DateTime  @default(now())
+  answeredAt DateTime?
+
+  @@index([postId])
+}
+
 model Trade {
-  id          String   @id @default(uuid())
+  id          String       @id @default(uuid())
   postId      String
-  post        SkillPost @relation(fields: [postId], references: [id])
+  post        SkillPost    @relation(fields: [postId], references: [id])
   learnerId   String
-  learner     User     @relation("Learner", fields: [learnerId], references: [id])
+  learner     User         @relation("Learner", fields: [learnerId], references: [id])
   teacherId   String
-  teacher     User     @relation("Teacher", fields: [teacherId], references: [id])
-  status      String   @default("PENDING") // PENDING, ACCEPTED, COMPLETED
+  teacher     User         @relation("Teacher", fields: [teacherId], references: [id])
+  status      String       @default("PENDING") // PENDING, ACCEPTED, COMPLETED
   transaction Transaction?
+  createdAt   DateTime     @default(now())
 }
 
 model Transaction {
@@ -76,7 +133,7 @@ model Transaction {
   tradeId   String?  @unique
   trade     Trade?   @relation(fields: [tradeId], references: [id])
   amount    Int
-  type      String   // DEBIT, CREDIT
+  type      String // DEBIT, CREDIT
   createdAt DateTime @default(now())
 }
 
@@ -115,4 +172,3 @@ model BarterRequest {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 }
-

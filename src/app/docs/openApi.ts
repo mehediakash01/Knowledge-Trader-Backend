@@ -17,6 +17,7 @@ export const openApiDocument = {
     { name: "AI" },
   ],
   paths: {
+    "/auth/google-login": { post: { tags: ["Auth"], summary: "Login user with Google" } },
     "/auth/login": { post: { tags: ["Auth"], summary: "Login user" } },
     "/users/register": { post: { tags: ["Users"], summary: "Register user" } },
     "/skill-posts": {

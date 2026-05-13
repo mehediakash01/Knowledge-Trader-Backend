@@ -24,6 +24,27 @@ const loginUser = catchAsync(async (req, res) => {
   });
 });
 
+const googleLogin = catchAsync(async (req, res) => {
+  const result = await AuthServices.googleLogin(req.body);
+
+  res.cookie("refreshToken", result.refreshToken, {
+    secure: process.env.NODE_ENV === "production",
+    httpOnly: true,
+    sameSite: "strict",
+  });
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Google login successful",
+    data: {
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      user: result.user,
+    },
+  });
+});
+
 const getMe = catchAsync(async (req, res) => {
   const result = await AuthServices.getMe(req.user.id);
 
@@ -37,5 +58,6 @@ const getMe = catchAsync(async (req, res) => {
 
 export const AuthControllers = {
   loginUser,
+  googleLogin,
   getMe,
 };

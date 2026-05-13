@@ -21,7 +21,7 @@ const config = {
     geminiApiKey: process.env.GEMINI_API_KEY,
     groqApiKey: process.env.GROQ_API_KEY,
     openRouterApiKey: process.env.OPENROUTER_API_KEY,
-    timeoutMs: Number(process.env.AI_TIMEOUT_MS) || 10000,
+    timeoutMs: Number(process.env.AI_TIMEOUT_MS) || 30000,
   },
 };
 
