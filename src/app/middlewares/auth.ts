@@ -7,6 +7,22 @@ import catchAsync from "../../shared/catchAsync";
 import { Role } from "../../../generated/prisma/enums";
 import { prisma } from "../../../lib/prisma";
 
+const isJwtVerificationError = (error: unknown): boolean => {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  if (!("name" in error)) {
+    return false;
+  }
+
+  return (
+    error.name === "TokenExpiredError" ||
+    error.name === "JsonWebTokenError" ||
+    error.name === "NotBeforeError"
+  );
+};
+
 const auth = (...requiredRoles: Role[]) => {
   return catchAsync(async (req: Request, _res: Response, next: NextFunction) => {
     const token = req.headers.authorization?.startsWith("Bearer ")
@@ -26,7 +42,17 @@ const auth = (...requiredRoles: Role[]) => {
       );
     }
 
-    const decoded = jwtHelpers.verifyToken(token, jwtSecret);
+    let decoded;
+
+    try {
+      decoded = jwtHelpers.verifyToken(token, jwtSecret);
+    } catch (error) {
+      if (isJwtVerificationError(error)) {
+        throw new AppError(httpStatus.UNAUTHORIZED, "Your session has expired");
+      }
+
+      throw error;
+    }
 
     if (
       typeof decoded.id !== "string" ||
@@ -76,7 +102,18 @@ export const optionalAuth = catchAsync(
       return;
     }
 
-    const decoded = jwtHelpers.verifyToken(token, jwtSecret);
+    let decoded;
+
+    try {
+      decoded = jwtHelpers.verifyToken(token, jwtSecret);
+    } catch (error) {
+      if (isJwtVerificationError(error)) {
+        next();
+        return;
+      }
+
+      throw error;
+    }
 
     if (
       typeof decoded.id !== "string" ||

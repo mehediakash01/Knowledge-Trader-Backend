@@ -5,10 +5,10 @@ import catchAsync from "../../shared/catchAsync";
 const validateRequest = (schema: ZodType) =>
   catchAsync(async (req: Request, _res: Response, next: NextFunction) => {
     await schema.parseAsync({
-      body: req.body,
-      cookies: req.cookies,
-      params: req.params,
-      query: req.query,
+      body: req.body ?? {},
+      cookies: req.cookies ?? {},
+      params: req.params ?? {},
+      query: req.query ?? {},
     });
 
     next();

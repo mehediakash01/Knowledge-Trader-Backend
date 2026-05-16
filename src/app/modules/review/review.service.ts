@@ -110,9 +110,24 @@ const createReview = async (userId: string, payload: TCreateReviewPayload) => {
   });
 
   await updateCreatorReputation(result.review.post.creatorId);
+  await prisma.skillPost.update({
+    where: { id: payload.postId },
+    data: {
+      aiReviewSentimentScore: null,
+      aiReviewPros: null,
+      aiReviewCons: null,
+      aiReviewSummary: null,
+      aiReviewGeneratedAt: null,
+    },
+  });
   sendLiveNotification(result.notification.userId, result.notification);
 
-  return result.review;
+  const { user, ...review } = result.review;
+
+  return {
+    ...review,
+    reviewer: user,
+  };
 };
 
 export const ReviewServices = {
