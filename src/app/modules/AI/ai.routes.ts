@@ -31,12 +31,46 @@ router.post(
   AIControllers.summarizeReviews,
 );
 
+router.get(
+  "/reviews/:postId",
+  aiRateLimiter,
+  AIControllers.getSkillAIReview,
+);
+
+router.post(
+  "/reviews/:postId/generate",
+  aiRateLimiter,
+  AIControllers.generateSkillAIReview,
+);
+
 router.post(
   "/consultant",
   auth(Role.USER, Role.MANAGER, Role.ADMIN),
   aiRateLimiter,
   validateRequest(AIValidation.consultantValidationSchema),
   AIControllers.tradeConsultant,
+);
+
+router.post(
+  "/trade-value",
+  auth(Role.USER, Role.MANAGER, Role.ADMIN),
+  aiRateLimiter,
+  AIControllers.tradeValueAdvisor,
+);
+
+router.get(
+  "/analytics",
+  auth(Role.USER, Role.MANAGER, Role.ADMIN),
+  aiRateLimiter,
+  AIControllers.knowledgeAnalytics,
+);
+
+router.post(
+  "/generate-syllabus",
+  auth(Role.USER, Role.MANAGER, Role.ADMIN),
+  aiRateLimiter,
+  validateRequest(AIValidation.generateSyllabusValidationSchema),
+  AIControllers.generateSyllabus,
 );
 
 export const AIRoutes = router;

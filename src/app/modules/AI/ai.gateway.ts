@@ -90,24 +90,63 @@ export class AIGateway {
   }
 
   private safeJsonParse(response: string) {
-    const repaired = response
-      .trim()
-      .replace(/^```json\s*/i, "")
-      .replace(/^```\s*/i, "")
-      .replace(/```$/i, "")
+    // 1. Locate the first '{' or '['
+    const objStart = response.indexOf("{");
+    const arrStart = response.indexOf("[");
+    const start = objStart !== -1 && arrStart !== -1 
+      ? Math.min(objStart, arrStart) 
+      : Math.max(objStart, arrStart);
+
+    if (start === -1) {
+      throw new Error("AI response contained no valid JSON structure");
+    }
+
+    // 2. Extract from start to the end of the string
+    let rawJson = response.slice(start);
+
+    // 3. Clean up trailing markdown or text
+    const objEnd = rawJson.lastIndexOf("}");
+    const arrEnd = rawJson.lastIndexOf("]");
+    const end = Math.max(objEnd, arrEnd);
+    
+    if (end !== -1) {
+       rawJson = rawJson.slice(0, end + 1);
+    }
+
+    let cleaned = rawJson
+      .replace(/```json\s*/gi, "")
+      .replace(/```\s*/gi, "")
+      .replace(/```$/gi, "")
       .trim();
 
     try {
-      return JSON.parse(repaired);
-    } catch {
-      const start = repaired.indexOf("{");
-      const end = repaired.lastIndexOf("}");
-
-      if (start >= 0 && end > start) {
-        return JSON.parse(repaired.slice(start, end + 1));
+      return JSON.parse(cleaned);
+    } catch (error) {
+      // 4. Handle partial JSON (cut off mid-sentence)
+      try {
+        // Auto-close string if open
+        const quoteCount = (cleaned.match(/"/g) || []).length;
+        let patched = cleaned;
+        if (quoteCount % 2 !== 0) patched += '"';
+        
+        // Auto-close brackets/braces based on what's open
+        let openBraces = 0;
+        let openBrackets = 0;
+        for (let i = 0; i < patched.length; i++) {
+          if (patched[i] === '{' && patched[i-1] !== '\\') openBraces++;
+          if (patched[i] === '}' && patched[i-1] !== '\\') openBraces--;
+          if (patched[i] === '[' && patched[i-1] !== '\\') openBrackets++;
+          if (patched[i] === ']' && patched[i-1] !== '\\') openBrackets--;
+        }
+        
+        while (openBrackets > 0) { patched += ']'; openBrackets--; }
+        while (openBraces > 0) { patched += '}'; openBraces--; }
+        
+        const escaped = patched.replace(/\n/g, "\\n").replace(/\r/g, "\\r");
+        return JSON.parse(escaped);
+      } catch (finalError) {
+        throw new Error(`AI response JSON parsing failed completely: ${finalError}`);
       }
-
-      throw new Error("AI response was not valid JSON");
     }
   }
 
