@@ -2,9 +2,7 @@ import httpStatus from "http-status";
 import pick from "../../../shared/pick";
 import catchAsync from "../../../shared/catchAsync";
 import sendResponse from "../../../shared/sendResponse";
-import {
-  skillPostFilterableFields,
-} from "./skillPost.constant";
+import { skillPostFilterableFields } from "./skillPost.constant";
 import { SkillPostServices } from "./skillPost.service";
 
 const paginationFields = ["page", "limit", "sortBy", "sortOrder"];
@@ -88,6 +86,56 @@ const updateSkillPost = catchAsync(async (req, res) => {
   });
 });
 
+// ─── Q&A Controllers ────────────────────────────────────────────────────────────
+
+const createQuestion = catchAsync(async (req, res) => {
+  const result = await SkillPostServices.createQuestion(
+    String(req.params.id),
+    req.user!.id,
+    req.body.body,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.CREATED,
+    success: true,
+    message: "Question submitted successfully",
+    data: result,
+  });
+});
+
+const answerQuestion = catchAsync(async (req, res) => {
+  const result = await SkillPostServices.answerQuestion(
+    String(req.params.questionId),
+    req.user!.id,
+    req.body.answer,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Answer posted successfully",
+    data: result,
+  });
+});
+
+const getQuestionsForPost = catchAsync(async (req, res) => {
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const result = await SkillPostServices.getQuestionsForPost(
+    String(req.params.id),
+    page,
+    limit,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Questions retrieved successfully",
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
 export const SkillPostControllers = {
   createSkillPost,
   getAllSkillPosts,
@@ -95,4 +143,7 @@ export const SkillPostControllers = {
   getCategories,
   getHomeFeed,
   updateSkillPost,
+  createQuestion,
+  answerQuestion,
+  getQuestionsForPost,
 };

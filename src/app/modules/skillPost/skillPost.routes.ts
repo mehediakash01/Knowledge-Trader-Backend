@@ -7,11 +7,14 @@ import { SkillPostValidation } from "./skillPost.validation";
 
 const router = Router();
 
+// Public
 router.get("/", SkillPostControllers.getAllSkillPosts);
 router.get("/categories", SkillPostControllers.getCategories);
 router.get("/home-feed", SkillPostControllers.getHomeFeed);
 router.get("/:id", optionalAuth, SkillPostControllers.getSingleSkillPost);
+router.get("/:id/questions", SkillPostControllers.getQuestionsForPost);
 
+// Auth-required
 router.post(
   "/",
   auth(Role.USER, Role.MANAGER, Role.ADMIN),
@@ -24,6 +27,21 @@ router.patch(
   auth(Role.USER, Role.MANAGER, Role.ADMIN),
   validateRequest(SkillPostValidation.updateSkillPostValidationSchema),
   SkillPostControllers.updateSkillPost,
+);
+
+// Seller Q&A
+router.post(
+  "/:id/questions",
+  auth(Role.USER, Role.MANAGER, Role.ADMIN),
+  validateRequest(SkillPostValidation.createQuestionValidationSchema),
+  SkillPostControllers.createQuestion,
+);
+
+router.patch(
+  "/questions/:questionId/answer",
+  auth(Role.USER, Role.MANAGER, Role.ADMIN),
+  validateRequest(SkillPostValidation.answerQuestionValidationSchema),
+  SkillPostControllers.answerQuestion,
 );
 
 export const SkillPostRoutes = router;

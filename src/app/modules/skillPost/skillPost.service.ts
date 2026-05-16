@@ -17,13 +17,28 @@ type TPaginationOptions = {
   sortOrder?: string;
 };
 
+// ─── Locked field names to strip from public responses ────────────────────────
+const VAULT_FIELDS = ["syllabus", "longDescription", "resourceLinks", "lockedContent"] as const;
+
+const clearAiReviewCache = {
+  aiReviewSentimentScore: null,
+  aiReviewPros: null,
+  aiReviewCons: null,
+  aiReviewSummary: null,
+  aiReviewGeneratedAt: null,
+};
+
 const createSkillPost = async (
   userId: string,
   payload: TSkillPostCreateInput,
 ) => {
+  // Extract custom vault fields that don't belong to the Prisma model directly
+  // and properly embed them inside lockedContent, or just omit them from payload.
+  const { vaultContentType, vaultVideo, vaultPdf, vaultCodeLink, vaultCodeDescription, ...validPayload } = payload as any;
+  
   const result = await prisma.skillPost.create({
     data: {
-      ...payload,
+      ...validPayload,
       creatorId: userId,
     },
     include: {
@@ -33,6 +48,7 @@ const createSkillPost = async (
           name: true,
           email: true,
           reputationScore: true,
+          image: true,
         },
       },
     },
@@ -63,6 +79,12 @@ const getAllSkillPosts = async (
         },
         {
           category: {
+            contains: searchTerm,
+            mode: "insensitive",
+          },
+        },
+        {
+          shortDescription: {
             contains: searchTerm,
             mode: "insensitive",
           },
@@ -123,18 +145,36 @@ const getAllSkillPosts = async (
       orderBy: {
         [sortBy]: sortOrder,
       },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        category: true,
+        tags: true,
+        shortDescription: true,
+        thumbnail: true,
+        teaserAsset: true,
+        roadmapType: true,
+        outcomes: true,
+        targetAudience: true,
+        valueProp: true,
+        tokenPrice: true,
+        images: true,
+        creatorId: true,
+        createdAt: true,
         creator: {
           select: {
             id: true,
             name: true,
             email: true,
             reputationScore: true,
+            image: true,
           },
         },
         _count: {
           select: {
             reviews: true,
+            questions: true,
           },
         },
       },
@@ -156,9 +196,7 @@ const getAllSkillPosts = async (
 
 const getSingleSkillPost = async (id: string, userId?: string) => {
   const result = await prisma.skillPost.findUnique({
-    where: {
-      id,
-    },
+    where: { id },
     include: {
       creator: {
         select: {
@@ -167,11 +205,34 @@ const getSingleSkillPost = async (id: string, userId?: string) => {
           email: true,
           reputationScore: true,
           expertise: true,
+          image: true,
         },
       },
       _count: {
         select: {
           reviews: true,
+          questions: true,
+        },
+      },
+      questions: {
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        include: {
+          asker: {
+            select: { id: true, name: true, image: true },
+          },
+          answerer: {
+            select: { id: true, name: true, image: true },
+          },
+        },
+      },
+      reviews: {
+        orderBy: { createdAt: "desc" },
+        take: 6,
+        include: {
+          user: {
+            select: { id: true, name: true, image: true },
+          },
         },
       },
     },
@@ -181,30 +242,20 @@ const getSingleSkillPost = async (id: string, userId?: string) => {
     throw new AppError(httpStatus.NOT_FOUND, "Skill post not found");
   }
 
-  const hasCompletedTrade = userId
-    ? await prisma.trade.findFirst({
-        where: {
-          postId: id,
-          learnerId: userId,
-          status: "COMPLETED",
-        },
-        select: {
-          id: true,
-        },
-      })
-    : null;
-
-  const hasReviewed = userId
-    ? await prisma.review.findFirst({
-        where: {
-          postId: id,
-          userId,
-        },
-        select: {
-          id: true,
-        },
-      })
-    : null;
+  const [hasCompletedTrade, hasReviewed] = await Promise.all([
+    userId
+      ? prisma.trade.findFirst({
+          where: { postId: id, learnerId: userId, status: "COMPLETED" },
+          select: { id: true },
+        })
+      : Promise.resolve(null),
+    userId
+      ? prisma.review.findFirst({
+          where: { postId: id, userId },
+          select: { id: true },
+        })
+      : Promise.resolve(null),
+  ]);
 
   const canAccessLockedContent =
     Boolean(userId) &&
@@ -212,14 +263,22 @@ const getSingleSkillPost = async (id: string, userId?: string) => {
 
   const responseData = {
     ...result,
+    reviews: result.reviews?.map(({ user, ...review }) => ({
+      ...review,
+      reviewer: user,
+    })),
     isAccessible: canAccessLockedContent,
     isOwned: result.creatorId === userId,
     hasReviewed: Boolean(hasReviewed),
   };
 
+  // Strip vault fields from unauthorized users
   if (!canAccessLockedContent) {
-    const { lockedContent: _lockedContent, ...publicResult } = responseData;
-    return publicResult;
+    const publicData = { ...responseData } as Record<string, unknown>;
+    for (const field of VAULT_FIELDS) {
+      delete publicData[field];
+    }
+    return publicData;
   }
 
   return responseData;
@@ -260,42 +319,52 @@ const getHomeFeed = async () => {
   const [featured, latest, categories] = await Promise.all([
     prisma.skillPost.findMany({
       take: 8,
-      orderBy: {
-        tokenPrice: "desc",
-      },
-      include: {
+      orderBy: { tokenPrice: "desc" },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        category: true,
+        shortDescription: true,
+        thumbnail: true,
+        teaserAsset: true,
+        outcomes: true,
+        roadmapType: true,
+        tokenPrice: true,
+        images: true,
+        createdAt: true,
         creator: {
-          select: {
-            id: true,
-            name: true,
-            reputationScore: true,
-          },
+          select: { id: true, name: true, reputationScore: true, image: true },
         },
+        _count: { select: { reviews: true } },
       },
     }),
     prisma.skillPost.findMany({
       take: 8,
-      orderBy: {
-        title: "asc",
-      },
-      include: {
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        category: true,
+        shortDescription: true,
+        thumbnail: true,
+        teaserAsset: true,
+        outcomes: true,
+        roadmapType: true,
+        tokenPrice: true,
+        images: true,
+        createdAt: true,
         creator: {
-          select: {
-            id: true,
-            name: true,
-            reputationScore: true,
-          },
+          select: { id: true, name: true, reputationScore: true, image: true },
         },
+        _count: { select: { reviews: true } },
       },
     }),
     getCategories(),
   ]);
-  const result = {
-    featured,
-    latest,
-    categories,
-  };
 
+  const result = { featured, latest, categories };
   await cache.set(cacheKey, result, 60 * 5);
 
   return result;
@@ -307,13 +376,8 @@ const updateSkillPost = async (
   payload: TSkillPostUpdateInput,
 ) => {
   const skillPost = await prisma.skillPost.findUnique({
-    where: {
-      id,
-    },
-    select: {
-      id: true,
-      creatorId: true,
-    },
+    where: { id },
+    select: { id: true, creatorId: true },
   });
 
   if (!skillPost) {
@@ -328,15 +392,94 @@ const updateSkillPost = async (
   }
 
   const result = await prisma.skillPost.update({
-    where: {
-      id,
+    where: { id },
+    data: {
+      ...payload,
+      ...(Object.keys(payload).length > 0 ? clearAiReviewCache : {}),
     },
-    data: payload,
   });
 
   await cache.delByPrefix("skill-post:");
 
   return result;
+};
+
+// ─── Seller Q&A ────────────────────────────────────────────────────────────────
+
+const createQuestion = async (
+  postId: string,
+  askerId: string,
+  body: string,
+) => {
+  const post = await prisma.skillPost.findUnique({
+    where: { id: postId },
+    select: { id: true },
+  });
+
+  if (!post) {
+    throw new AppError(httpStatus.NOT_FOUND, "Skill post not found");
+  }
+
+  return prisma.question.create({
+    data: { postId, askerId, body },
+    include: {
+      asker: { select: { id: true, name: true, image: true } },
+    },
+  });
+};
+
+const answerQuestion = async (
+  questionId: string,
+  userId: string,
+  answer: string,
+) => {
+  const question = await prisma.question.findUnique({
+    where: { id: questionId },
+    include: { post: { select: { creatorId: true } } },
+  });
+
+  if (!question) {
+    throw new AppError(httpStatus.NOT_FOUND, "Question not found");
+  }
+
+  if (question.post.creatorId !== userId) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "Only the skill owner can answer questions",
+    );
+  }
+
+  return prisma.question.update({
+    where: { id: questionId },
+    data: {
+      answer,
+      answeredBy: userId,
+      answeredAt: new Date(),
+    },
+    include: {
+      asker: { select: { id: true, name: true, image: true } },
+      answerer: { select: { id: true, name: true, image: true } },
+    },
+  });
+};
+
+const getQuestionsForPost = async (postId: string, page = 1, limit = 10) => {
+  const skip = (page - 1) * limit;
+  const [data, total] = await Promise.all([
+    prisma.question.findMany({
+      where: { postId },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+      include: {
+        asker: { select: { id: true, name: true, image: true } },
+        answerer: { select: { id: true, name: true, image: true } },
+      },
+    }),
+    prisma.question.count({ where: { postId } }),
+  ]);
+
+  return { meta: { page, limit, total }, data };
 };
 
 export const SkillPostServices = {
@@ -346,4 +489,7 @@ export const SkillPostServices = {
   getCategories,
   getHomeFeed,
   updateSkillPost,
+  createQuestion,
+  answerQuestion,
+  getQuestionsForPost,
 };

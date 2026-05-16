@@ -4,13 +4,21 @@ export type TSkillPostCreateInput = {
   title: string;
   slug: string;
   category: string;
-  tags: string[];
+  tags?: string[];
   shortDescription: string;
-  longDescription: string;
-  previewContent: Prisma.InputJsonValue;
-  lockedContent: Prisma.InputJsonValue;
+  thumbnail?: string;
+  teaserAsset?: string;
+  roadmapType?: "DAILY" | "HOURLY" | "SEVEN_DAY" | "THIRTY_DAY";
+  outcomes?: string[];
+  targetAudience?: string;
+  prerequisites?: string;
+  valueProp?: string;
+  longDescription?: string;
+  syllabus?: Prisma.InputJsonValue;
+  resourceLinks?: string[];
+  lockedContent?: Prisma.InputJsonValue;
   tokenPrice: number;
-  images: string[];
+  images?: string[];
 };
 
 export type TSkillPostUpdateInput = Partial<TSkillPostCreateInput>;

@@ -218,7 +218,7 @@ const getMyTrades = async (userId: string) => {
           transaction: true,
         },
       }),
-      prisma.BarterRequest.findMany({
+      prisma.barterRequest.findMany({
         where: {
           senderId: userId,
         },
@@ -231,7 +231,7 @@ const getMyTrades = async (userId: string) => {
         },
         orderBy: { createdAt: "desc" },
       }),
-      prisma.BarterRequest.findMany({
+      prisma.barterRequest.findMany({
         where: {
           receiverId: userId,
         },
@@ -289,7 +289,7 @@ const createBarterRequest = async (payload: {
       );
     }
 
-    const barterRequest = await tx.BarterRequest.create({
+    const barterRequest = await tx.barterRequest.create({
       data: {
         senderId,
         receiverId,
@@ -325,7 +325,7 @@ const updateBarterStatus = async (
   status: "ACCEPTED" | "REJECTED",
 ) => {
   const result = await prisma.$transaction(async (tx) => {
-    const barterRequest = await tx.BarterRequest.findUnique({
+    const barterRequest = await tx.barterRequest.findUnique({
       where: { id: barterId },
       include: {
         sender: { select: { id: true, name: true } },
@@ -353,7 +353,7 @@ const updateBarterStatus = async (
       );
     }
 
-    const updatedBarter = await tx.BarterRequest.update({
+    const updatedBarter = await tx.barterRequest.update({
       where: { id: barterId },
       data: { status },
     });
