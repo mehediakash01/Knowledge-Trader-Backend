@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { AuthRoutes } from "../modules/auth/auth.routes";
+import { AdminRoutes } from "../modules/admin/admin.routes";
 import { AIRoutes } from "../modules/AI/ai.routes";
 import { AnalyticsRoutes } from "../modules/analytics/analytics.routes";
 import { NotificationRoutes } from "../modules/notification/notification.routes";
@@ -23,6 +24,10 @@ const moduleRoutes = [
   {
     path: "/auth",
     route: AuthRoutes,
+  },
+  {
+    path: "/admin",
+    route: AdminRoutes,
   },
   {
     path: "/ai",

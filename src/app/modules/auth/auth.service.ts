@@ -21,6 +21,7 @@ const authUserSelect = {
   name: true,
   email: true,
   role: true,
+  status: true,
   tokenBalance: true,
   reputationScore: true,
   image: true,
@@ -38,6 +39,7 @@ const buildAuthResponse = async (user: {
   name: string;
   email: string;
   role: string;
+  status?: string;
   tokenBalance: number;
   reputationScore: number;
   image: string | null;
@@ -85,6 +87,7 @@ const buildAuthResponse = async (user: {
       name: user.name,
       email: user.email,
       role: user.role,
+      status: user.status,
       image: user.image,
       bio: user.bio,
       tagline: user.tagline,
@@ -124,6 +127,7 @@ const loginUser = async (payload: TLoginPayload) => {
     name: user.name,
     email: user.email,
     role: user.role,
+    status: user.status,
     tokenBalance: user.tokenBalance,
     reputationScore: user.reputationScore,
     image: user.image,
@@ -194,6 +198,7 @@ const googleLogin = async (payload: TGoogleLoginPayload) => {
     name: user.name,
     email: user.email,
     role: user.role,
+    status: user.status,
     tokenBalance: user.tokenBalance,
     reputationScore: user.reputationScore,
     image: user.image,
@@ -215,6 +220,7 @@ const getMe = async (id: string) => {
       name: true,
       email: true,
       role: true,
+      status: true,
       tokenBalance: true,
       reputationScore: true,
       image: true,

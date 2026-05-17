@@ -13,6 +13,12 @@ enum Role {
   MANAGER
 }
 
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
 enum RoadmapType {
   DAILY
   HOURLY
@@ -26,6 +32,7 @@ model User {
   email           String          @unique
   password        String
   role            Role            @default(USER)
+  status          UserStatus      @default(ACTIVE)
   tokenBalance    Int             @default(10)
   reputationScore Float           @default(0.0)
   image           String?
@@ -36,6 +43,7 @@ model User {
   experience      Json?
   expertise       Json?
   learningPath    Json?
+  createdAt       DateTime        @default(now())
   posts           SkillPost[]
   tradesAsLearner Trade[]         @relation("Learner")
   tradesAsTeacher Trade[]         @relation("Teacher")
@@ -76,6 +84,7 @@ model SkillPost {
   aiReviewCons           Json?
   aiReviewSummary        String?   @db.Text
   aiReviewGeneratedAt    DateTime?
+  moderationStatus       String    @default("CLEAR")
 
   tokenPrice       Int
   images           String[]        @default([])

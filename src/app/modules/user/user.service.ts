@@ -31,6 +31,7 @@ const createUser = async (payload: TCreateUserPayload) => {
       name: true,
       email: true,
       role: true,
+      status: true,
       tokenBalance: true,
       reputationScore: true,
       interests: true,

@@ -84,6 +84,8 @@ const auth = (...requiredRoles: Role[]) => {
   });
 };
 
+export const authorizeRole = (...requiredRoles: Role[]) => auth(...requiredRoles);
+
 export const optionalAuth = catchAsync(
   async (req: Request, _res: Response, next: NextFunction) => {
     const token = req.headers.authorization?.startsWith("Bearer ")
