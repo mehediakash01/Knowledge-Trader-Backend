@@ -14,7 +14,7 @@ services:
     name: knowledge-trader-backend
     env: node
     plan: free
-    buildCommand: npm install && npm run build && (npx prisma migrate resolve --rolled-back 20260516000000_add_user_interests || true) && npx prisma migrate deploy
+    buildCommand: npm install && npm run build && npx prisma migrate deploy
     startCommand: npm start
     envVars:
       - key: NODE_VERSION
