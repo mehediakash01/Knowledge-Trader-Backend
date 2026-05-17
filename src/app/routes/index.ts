@@ -6,7 +6,12 @@ import { NotificationRoutes } from "../modules/notification/notification.routes"
 import { ReviewRoutes } from "../modules/review/review.routes";
 import { SkillPostRoutes } from "../modules/skillPost/skillPost.routes";
 import { TradeRoutes } from "../modules/trade/trade.routes";
+import { TradeControllers } from "../modules/trade/trade.controller";
+import { TradeValidation } from "../modules/trade/trade.validation";
 import { UserRoutes } from "../modules/user/user.routes";
+import auth from "../middlewares/auth";
+import validateRequest from "../middlewares/validateRequest";
+import { Role } from "../../../generated/prisma/enums";
 
 const router = Router();
 
@@ -46,5 +51,12 @@ const moduleRoutes = [
 ];
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route));
+
+router.patch(
+  "/barter-requests/:id/resolve",
+  auth(Role.USER),
+  validateRequest(TradeValidation.resolveBarterRequestValidationSchema),
+  TradeControllers.resolveBarterRequest,
+);
 
 export default router;

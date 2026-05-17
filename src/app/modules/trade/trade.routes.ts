@@ -24,10 +24,17 @@ router.post(
 );
 
 router.patch(
+  "/barter-requests/:id/resolve",
+  auth(Role.USER),
+  validateRequest(TradeValidation.resolveBarterRequestValidationSchema),
+  TradeControllers.resolveBarterRequest,
+);
+
+router.patch(
   "/barter-request/:barterId",
   auth(Role.USER),
-  validateRequest(TradeValidation.updateBarterStatusValidationSchema),
-  TradeControllers.updateBarterStatus,
+  validateRequest(TradeValidation.resolveBarterRequestValidationSchema),
+  TradeControllers.resolveBarterRequest,
 );
 
 export const TradeRoutes = router;

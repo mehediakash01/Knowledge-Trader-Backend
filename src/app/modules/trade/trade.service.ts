@@ -1,7 +1,7 @@
 import httpStatus from "http-status";
 import { prisma } from "../../../../lib/prisma";
 import AppError from "../../../errors/AppError";
-import { sendLiveNotification } from "../../../socket";
+import { NotificationServices } from "../notification/notification.service";
 
 const executeTokenTrade = async (learnerId: string, postId: string) => {
   const result = await prisma.$transaction(async (tx) => {
@@ -270,6 +270,7 @@ const createBarterRequest = async (payload: {
     // Check if skill offered belongs to sender
     const skillOffered = await tx.skillPost.findUnique({
       where: { id: skillOfferedId },
+      select: { id: true, title: true, creatorId: true },
     });
     if (!skillOffered || skillOffered.creatorId !== senderId) {
       throw new AppError(
@@ -281,6 +282,7 @@ const createBarterRequest = async (payload: {
     // Check if skill requested belongs to receiver
     const skillRequested = await tx.skillPost.findUnique({
       where: { id: skillRequestedId },
+      select: { id: true, title: true, creatorId: true },
     });
     if (!skillRequested || skillRequested.creatorId !== receiverId) {
       throw new AppError(
@@ -304,25 +306,24 @@ const createBarterRequest = async (payload: {
       },
     });
 
-    const notification = await tx.notification.create({
-      data: {
+    return {
+      barterRequest,
+      notificationPayload: {
         userId: receiverId,
         title: "New Barter Request",
-        message: `${barterRequest.sender.name} wants to swap "${barterRequest.skillOffered.title}" for your "${barterRequest.skillRequested.title}".`,
+        message: `${barterRequest.sender.name} has offered ${barterRequest.skillOffered.title} in exchange for your ${barterRequest.skillRequested.title}.`,
       },
-    });
-
-    return { barterRequest, notification };
+    };
   });
 
-  sendLiveNotification(result.notification.userId, result.notification);
+  await NotificationServices.createNotification(result.notificationPayload);
   return result.barterRequest;
 };
 
-const updateBarterStatus = async (
+const resolveBarterRequest = async (
   barterId: string,
   userId: string,
-  status: "ACCEPTED" | "REJECTED",
+  action: "ACCEPT" | "DECLINE",
 ) => {
   const result = await prisma.$transaction(async (tx) => {
     const barterRequest = await tx.barterRequest.findUnique({
@@ -353,16 +354,15 @@ const updateBarterStatus = async (
       );
     }
 
+    const nextStatus = action === "ACCEPT" ? "ACCEPTED" : "DECLINED";
+
     const updatedBarter = await tx.barterRequest.update({
       where: { id: barterId },
-      data: { status },
+      data: { status: nextStatus },
     });
 
-    let notification;
-
-    if (status === "ACCEPTED") {
-      // ATOMIC SWAP: Grant access to both parties
-      // 1. Grant sender access to skillRequested
+    if (action === "ACCEPT") {
+      // Grant reciprocal access by recording completed trades for both directions.
       await tx.trade.create({
         data: {
           postId: barterRequest.skillRequestedId,
@@ -372,7 +372,6 @@ const updateBarterStatus = async (
         },
       });
 
-      // 2. Grant receiver access to skillOffered
       await tx.trade.create({
         data: {
           postId: barterRequest.skillOfferedId,
@@ -382,27 +381,40 @@ const updateBarterStatus = async (
         },
       });
 
-      notification = await tx.notification.create({
-        data: {
-          userId: barterRequest.senderId,
-          title: "Barter Accepted!",
-          message: `${barterRequest.receiver.name} accepted your swap! You now have access to "${barterRequest.skillRequested.title}".`,
-        },
-      });
-    } else {
-      notification = await tx.notification.create({
-        data: {
-          userId: barterRequest.senderId,
-          title: "Barter Rejected",
-          message: `${barterRequest.receiver.name} declined your swap request for "${barterRequest.skillRequested.title}".`,
-        },
-      });
+      return {
+        updatedBarter,
+        notifications: [
+          {
+            userId: barterRequest.senderId,
+            title: "Barter Accepted",
+            message: `${barterRequest.receiver.name} accepted your barter. You now have access to ${barterRequest.skillRequested.title}.`,
+          },
+          {
+            userId: barterRequest.receiverId,
+            title: "Barter Accepted",
+            message: `You accepted ${barterRequest.sender.name}'s barter and now have access to ${barterRequest.skillOffered.title}.`,
+          },
+        ],
+      };
     }
 
-    return { updatedBarter, notification };
+    return {
+      updatedBarter,
+      notifications: [
+        {
+          userId: barterRequest.senderId,
+          title: "Barter Declined",
+          message: `${barterRequest.receiver.name} declined your barter for ${barterRequest.skillRequested.title}.`,
+        },
+      ],
+    };
   });
 
-  sendLiveNotification(result.notification.userId, result.notification);
+  await Promise.all(
+    result.notifications.map((notification) =>
+      NotificationServices.createNotification(notification),
+    ),
+  );
   return result.updatedBarter;
 };
 
@@ -410,5 +422,6 @@ export const TradeServices = {
   executeTokenTrade,
   getMyTrades,
   createBarterRequest,
-  updateBarterStatus,
+  resolveBarterRequest,
+  updateBarterStatus: resolveBarterRequest,
 };

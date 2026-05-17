@@ -14,10 +14,10 @@ const createBarterValidationSchema = z.object({
   }),
 });
 
-const updateBarterStatusValidationSchema = z.object({
+const resolveBarterRequestValidationSchema = z.object({
   body: z.object({
-    status: z.enum(["ACCEPTED", "REJECTED"], {
-      errorMap: () => ({ message: "Status must be ACCEPTED or REJECTED" }),
+    action: z.enum(["ACCEPT", "DECLINE"], {
+      errorMap: () => ({ message: "Action must be ACCEPT or DECLINE" }),
     }),
   }),
 });
@@ -25,5 +25,5 @@ const updateBarterStatusValidationSchema = z.object({
 export const TradeValidation = {
   executeTokenTradeValidationSchema,
   createBarterValidationSchema,
-  updateBarterStatusValidationSchema,
+  resolveBarterRequestValidationSchema,
 };
