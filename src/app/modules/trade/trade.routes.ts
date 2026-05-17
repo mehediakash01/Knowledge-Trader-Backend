@@ -6,33 +6,34 @@ import { TradeControllers } from "./trade.controller";
 import { TradeValidation } from "./trade.validation";
 
 const router = Router();
+const authenticatedRoles = [Role.USER, Role.MANAGER, Role.ADMIN];
 
 router.post(
   "/token-trade",
-  auth(Role.USER),
+  auth(...authenticatedRoles),
   validateRequest(TradeValidation.executeTokenTradeValidationSchema),
   TradeControllers.executeTokenTrade,
 );
 
-router.get("/my-trades", auth(Role.USER), TradeControllers.getMyTrades);
+router.get("/my-trades", auth(...authenticatedRoles), TradeControllers.getMyTrades);
 
 router.post(
   "/barter-request",
-  auth(Role.USER),
+  auth(...authenticatedRoles),
   validateRequest(TradeValidation.createBarterValidationSchema),
   TradeControllers.createBarterRequest,
 );
 
 router.patch(
   "/barter-requests/:id/resolve",
-  auth(Role.USER),
+  auth(...authenticatedRoles),
   validateRequest(TradeValidation.resolveBarterRequestValidationSchema),
   TradeControllers.resolveBarterRequest,
 );
 
 router.patch(
   "/barter-request/:barterId",
-  auth(Role.USER),
+  auth(...authenticatedRoles),
   validateRequest(TradeValidation.resolveBarterRequestValidationSchema),
   TradeControllers.resolveBarterRequest,
 );

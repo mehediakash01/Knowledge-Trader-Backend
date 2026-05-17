@@ -2,6 +2,7 @@ import httpStatus from "http-status";
 import { prisma } from "../../../../lib/prisma";
 import AppError from "../../../errors/AppError";
 import { NotificationServices } from "../notification/notification.service";
+import { sendLiveNotification } from "../../../socket";
 
 const executeTokenTrade = async (learnerId: string, postId: string) => {
   const result = await prisma.$transaction(async (tx) => {
@@ -136,7 +137,6 @@ const executeTokenTrade = async (learnerId: string, postId: string) => {
     const creditTransaction = await tx.transaction.create({
       data: {
         userId: skillPost.creatorId,
-        tradeId: trade.id,
         amount: skillPost.tokenPrice,
         type: "CREDIT",
       },

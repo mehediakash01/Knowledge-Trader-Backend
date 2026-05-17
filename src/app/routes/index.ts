@@ -59,7 +59,7 @@ moduleRoutes.forEach((route) => router.use(route.path, route.route));
 
 router.patch(
   "/barter-requests/:id/resolve",
-  auth(Role.USER),
+  auth(Role.USER, Role.MANAGER, Role.ADMIN),
   validateRequest(TradeValidation.resolveBarterRequestValidationSchema),
   TradeControllers.resolveBarterRequest,
 );
