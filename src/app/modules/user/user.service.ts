@@ -1,9 +1,10 @@
-import { User } from "../../../../generated/prisma";
+
 import AppError from "../../../errors/AppError";
 import httpStatus from "http-status";
 import bcrypt from "bcrypt";
 import { prisma } from "../../../../lib/prisma";
 import pick from "../../../shared/pick";
+import { User } from "../../../../generated/prisma/browser";
 
 type TCreateUserPayload = {
   name: string;
@@ -12,7 +13,7 @@ type TCreateUserPayload = {
 };
 
 const createUser = async (payload: TCreateUserPayload) => {
-  const hashedPassword = await bcrypt.hash(payload.password, 12);
+  const hashedPassword = await bcrypt.hash(payload.password, 10);
 
   const result = await prisma.user.create({
     data: {

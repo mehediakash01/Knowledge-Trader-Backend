@@ -11,7 +11,7 @@ async function main() {
 
   initSocket(server);
 
-  server.listen(config.port, () => {
+  server.listen(config.port, '0.0.0.0', () => {
     console.log(`Knowledge Trader server is running on port ${config.port}`);
   });
 }
