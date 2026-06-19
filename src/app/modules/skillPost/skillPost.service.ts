@@ -36,6 +36,10 @@ const createSkillPost = async (
   // and properly embed them inside lockedContent, or just omit them from payload.
   const { vaultContentType, vaultVideo, vaultPdf, vaultCodeLink, vaultCodeDescription, ...validPayload } = payload as any;
   
+  const baseSlug = validPayload.title?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') || 'skill';
+  const uniqueSlug = `${baseSlug}-${Math.random().toString(36).substring(2, 7)}`;
+  validPayload.slug = uniqueSlug;
+
   const result = await prisma.skillPost.create({
     data: {
       ...validPayload,
