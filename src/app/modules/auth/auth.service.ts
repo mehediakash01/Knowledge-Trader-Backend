@@ -142,19 +142,13 @@ const loginUser = async (payload: TLoginPayload) => {
 };
 
 const googleLogin = async (payload: TGoogleLoginPayload) => {
-  const googleClientId = process.env.GOOGLE_CLIENT_ID;
-
-  if (!googleClientId) {
-    throw new AppError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      "Google client ID is not configured",
-    );
-  }
-
-  const client = new OAuth2Client(googleClientId);
+  const client = new OAuth2Client();
   const ticket = await client.verifyIdToken({
     idToken: payload.token,
-    audience: googleClientId,
+    audience: [
+      process.env.GOOGLE_WEB_CLIENT_ID,
+      process.env.GOOGLE_ANDROID_CLIENT_ID
+    ].filter(Boolean) as string[],
   });
   const googlePayload = ticket.getPayload();
 
@@ -167,13 +161,14 @@ const googleLogin = async (payload: TGoogleLoginPayload) => {
   }
 
   const email = googlePayload.email;
-  const existingUser = await prisma.user.findUnique({
+  const googleId = googlePayload.sub;
+
+  let user = await prisma.user.findUnique({
     where: { email },
   });
 
-  const user =
-    existingUser ??
-    (await prisma.user.create({
+  if (!user) {
+    user = await prisma.user.create({
       data: {
         name:
           googlePayload.name ||
@@ -181,6 +176,7 @@ const googleLogin = async (payload: TGoogleLoginPayload) => {
           email.split("@")[0] ||
           "Google User",
         email,
+        googleId,
         password: await bcrypt.hash(randomBytes(32).toString("hex"), 12),
         image: googlePayload.picture,
         tokenBalance: 10,
@@ -191,7 +187,13 @@ const googleLogin = async (payload: TGoogleLoginPayload) => {
         socialLinks: [],
         experience: [],
       },
-    }));
+    });
+  } else if (!user.googleId) {
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: { googleId },
+    });
+  }
 
   return buildAuthResponse({
     id: user.id,
